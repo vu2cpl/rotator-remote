@@ -1,0 +1,19 @@
+serial:
+  # Stable by-id path for the Rotor-EZ FTDI cable. Find yours with:
+  #   ls -l /dev/serial/by-id/
+  port: /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_AL05J29R-if00-port0
+  baudrate: 4800            # Rotor-EZ default, NOT configurable on the controller
+  timeout: 0.2             # blocking-read timeout for the reader thread (s)
+
+server:
+  port: 8090               # spe=8888, lp700=8089, rotator=8090
+  host: "0.0.0.0"
+
+polling:
+  poll_interval: 1.0           # seconds between AI1; azimuth queries
+  heartbeat: 15                # force a state re-broadcast every N s even if unchanged
+  presence_heartbeat: 5        # seconds between {type:heartbeat,...} presence msgs
+  serial_alive_threshold: 5    # a controller reply within N s ⇒ serial reported "up"
+
+logging:
+  level: INFO              # DEBUG, INFO, WARNING, ERROR

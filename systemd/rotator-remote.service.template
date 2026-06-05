@@ -1,0 +1,28 @@
+[Unit]
+Description=Rotator Remote Control (rotator-remote)
+Documentation=https://github.com/vu2cpl/rotator-remote
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+Group={{USER}}
+WorkingDirectory={{WORKDIR}}
+ExecStart={{WORKDIR}}/venv/bin/python {{WORKDIR}}/server.py
+Restart=always
+RestartSec=5
+# Send a clean SIGTERM so the shutdown handler runs (closes WS clients and
+# releases the serial port).
+KillSignal=SIGTERM
+TimeoutStopSec=10
+# Keep stdout/stderr in journald for `journalctl -u rotator-remote -f`.
+StandardOutput=journal
+StandardError=journal
+# Hardening — modest defaults that won't break serial access.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
