@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Antenna Rotator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <h1>Antenna Rotator <span class="sub">Rotor-EZ</span></h1>
+
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Disconnected</span>
+    <span class="pill" id="serialPill">rotor: down</span>
+    <span class="muted">clients: <span id="clientsValue">--</span></span>
+  </div>
+
+  <!-- Heading readout + compass -->
+  <div class="dial-section">
+    <div class="readout">
+      <div class="heading"><span id="headingValue">--</span><span class="deg">&deg;</span></div>
+      <div class="target"><span id="targetValue"></span></div>
+      <div class="chip" id="movingChip">SLEWING</div>
+    </div>
+
+    <svg id="compass" viewBox="0 0 220 220" aria-label="compass">
+      <circle cx="110" cy="110" r="100" class="rose"/>
+      <!-- 30° tick marks -->
+      <g class="ticks">
+        <line x1="110" y1="10" x2="110" y2="22"/>
+        <line x1="110" y1="198" x2="110" y2="210"/>
+        <line x1="10" y1="110" x2="22" y2="110"/>
+        <line x1="198" y1="110" x2="210" y2="110"/>
+        <line x1="65" y1="23.7" x2="71" y2="34.1"/>
+        <line x1="155" y1="23.7" x2="149" y2="34.1"/>
+        <line x1="196.3" y1="65" x2="185.9" y2="71"/>
+        <line x1="196.3" y1="155" x2="185.9" y2="149"/>
+        <line x1="155" y1="196.3" x2="149" y2="185.9"/>
+        <line x1="65" y1="196.3" x2="71" y2="185.9"/>
+        <line x1="23.7" y1="155" x2="34.1" y2="149"/>
+        <line x1="23.7" y1="65" x2="34.1" y2="71"/>
+      </g>
+      <!-- cardinal labels -->
+      <text x="110" y="40"  class="card NS">N</text>
+      <text x="183" y="116" class="card">E</text>
+      <text x="110" y="190" class="card">S</text>
+      <text x="37"  y="116" class="card">W</text>
+      <!-- target marker (points to commanded bearing) -->
+      <g id="targetMarker" style="display:none">
+        <polygon points="110,6 103,20 117,20" class="target-mark"/>
+      </g>
+      <!-- needle (points to current heading) -->
+      <g id="needle">
+        <polygon points="110,24 104,112 116,112" class="needle-head"/>
+        <line x1="110" y1="110" x2="110" y2="158" class="needle-tail"/>
+      </g>
+      <circle cx="110" cy="110" r="5" class="hub"/>
+    </svg>
+  </div>
+
+  <!-- Controls (greyed when rotor: down) -->
+  <div class="controls" id="controls">
+    <div class="goto-row">
+      <input type="number" id="azInput" min="0" max="359" placeholder="0&ndash;359" inputmode="numeric">
+      <button class="btn btn-go" onclick="rotGoInput()">GO</button>
+      <button class="btn btn-lp" onclick="rotLpsp()" title="Long path / short path (+180&deg;)">LP / +180&deg;</button>
+    </div>
+
+    <div class="presets">
+      <button class="btn preset" onclick="rotGoto(0)">N</button>
+      <button class="btn preset" onclick="rotGoto(45)">NE</button>
+      <button class="btn preset" onclick="rotGoto(90)">E</button>
+      <button class="btn preset" onclick="rotGoto(135)">SE</button>
+      <button class="btn preset" onclick="rotGoto(180)">S</button>
+      <button class="btn preset" onclick="rotGoto(225)">SW</button>
+      <button class="btn preset" onclick="rotGoto(270)">W</button>
+      <button class="btn preset" onclick="rotGoto(315)">NW</button>
+    </div>
+
+    <button class="btn btn-stop" onclick="rotStop()">&#9724; STOP</button>
+  </div>
+
+  <p class="footnote">Click the dial to slew to a bearing. Power is on Tasmota/MQTT
+  (Node-RED) &mdash; this page is azimuth only.</p>
+
+  <script src="app.js"></script>
+</body>
+</html>

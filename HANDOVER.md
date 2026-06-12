@@ -23,12 +23,24 @@ rotator/
   protocol.py                   Rotor-EZ command bytes + reply parser + RotatorState
   serial_handler.py             thread reader + asyncio writers; single port owner
   websocket_handler.py          multi-client broadcast (copied from spe-remote)
-  app.py                        Tornado routes: /ws, /healthz, /
+  app.py                        Tornado routes: /ws, /healthz, static (web/)
   config.py                     YAML loader
+web/                            standalone control page (index.html/app.js/style.css)
 config.yaml                     serial port/baud, server port 8090, polling
 systemd/rotator-remote.service.template
 setup.sh / run.sh / install-service.sh / uninstall-service.sh
 ```
+
+## Web UI (`web/`, served at `:8090/`)
+
+`app.py` now serves `web/` via a `NoCacheStaticFileHandler` (copied from
+spe-remote) at `/`, while keeping `/ws` and `/healthz` as their own routes
+(Stage 13b's `curl :8090/healthz` check still passes). The page is a plain
+HTML/JS/CSS compass UI — no build step, no Node-RED dependency — and is just
+another `/ws` client (heading readout + click-to-slew compass + goto/stop/lpsp
++ presets, driven by the existing JSON protocol). Power is deliberately out of
+scope (Tasmota/MQTT in Node-RED). Verified locally: server serves `/`,
+`/healthz`, and the assets with `Cache-Control: no-cache`.
 
 ## Architecture invariants (don't break these)
 

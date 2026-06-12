@@ -27,15 +27,19 @@ controlled over MQTT from Node-RED. This gateway is azimuth (serial) only.
   Rotor-EZ ──serial 4800-8N1── rotator-remote (Tornado, :8090)
                                    │ owns the FTDI port
                                    │ polls AI1; every ~1 s, parses the reply
+                                   │ serves a web UI at http://pi:8090/
                                    │ fans state JSON out to all ws clients
-              ┌────────────────────┼─────────────────────┐
-        ws://pi:8090/ws       (future Mac app)       (any 3rd client)
-              │
-      Node-RED Rotator tab (thin ws-client)
-              │
-      ┌───────┴────────┐
-   /ui compass     /shack RotatorCard
+        ┌──────────────────┬───────┴──────────┬──────────────────┐
+  http://pi:8090/     ws://pi:8090/ws    (future Mac app)   (any 3rd client)
+  (built-in web UI)         │
+                    Node-RED Rotator tab (thin ws-client)
+                            │
+                    ┌───────┴────────┐
+                 /ui compass     /shack RotatorCard
 ```
+
+All clients are equal peers on the same `/ws`; the built-in web page is just
+another one. Node-RED and `/shack` keep working while you use it.
 
 - A **daemon reader thread** does blocking serial reads and hands bytes to the
   asyncio loop.
@@ -47,6 +51,28 @@ controlled over MQTT from Node-RED. This gateway is azimuth (serial) only.
 
 The design is a simplified copy of `spe-remote`'s proven thread-reader +
 asyncio-writer model.
+
+---
+
+## Web UI
+
+Browse **`http://<pi>:8090/`** for a self-contained control page — no Node-RED
+needed (mirrors how `spe-remote` serves its UI at `:8888/`). It's just another
+`/ws` client, so it runs alongside Node-RED's `/ui` + `/shack` cards.
+
+- Large live **heading readout** (and the commanded target while slewing).
+- **Compass dial** — green needle at the current heading, amber marker at the
+  target. **Click anywhere on the dial to slew to that bearing.**
+- **Numeric azimuth + GO**, **preset bearings** (N/NE/E/SE/S/SW/W/NW),
+  a prominent **STOP**, and **LP / +180°** (long path).
+- **Status line** — connection pill, `rotor: up/down` (from the heartbeat's
+  `serial` field), and the client count. Controls grey out when the controller
+  isn't answering (e.g. rotator power off via Tasmota).
+
+Static files live in `web/` (`index.html` + `app.js` + `style.css`, no build
+step); the server adds no-cache revalidation headers so edits show up on
+reload. Power stays out of scope — it's Tasmota/MQTT from Node-RED — so this
+page is azimuth/serial only, matching the gateway.
 
 ---
 
@@ -135,6 +161,8 @@ Verify:
 
 ```bash
 curl http://localhost:8090/healthz
+curl -sf http://localhost:8090/ | head    # serves the web UI (index.html)
+# then browse http://<pi>:8090/ — heading reads live; GO/STOP/LP work.
 # optionally, with a ws CLI:
 #   npm i -g wscat ; wscat -c ws://localhost:8090/ws
 #   > {"type":"command","action":"goto","heading":90}
