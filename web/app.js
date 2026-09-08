@@ -2,7 +2,7 @@
 // Protocol (see rotator/protocol.py): we SEND
 //   {"type":"command","action":"goto","heading":N} | {"action":"stop"} | {"action":"lpsp"}
 // and RECEIVE
-//   {"type":"state","heading","target","moving","ts"}
+//   {"type":"state","heading","target","moving","overlap","ts"}
 //   {"type":"heartbeat","serial":"up"|"down","ts","clients"}
 (function () {
   "use strict";
@@ -79,6 +79,9 @@
     }
 
     document.getElementById("movingChip").classList.toggle("on", !!d.moving);
+    // OVERLAP: gateway-derived flag (rotor past 360° of travel) — lights the
+    // chip amber, same convention as the Node-RED dashboards' OVL LEDs.
+    document.getElementById("overlapChip").classList.toggle("on", !!d.overlap);
 
     // Compass needle + target marker (rotate clockwise from North).
     const needle = document.getElementById("needle");

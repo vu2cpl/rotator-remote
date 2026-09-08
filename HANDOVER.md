@@ -91,6 +91,16 @@ the port) before `rotator-remote` starts, or the gateway can't open the device.
 
 ## What changed
 
+### 2026-09-08 (later) — OVERLAP chip on the `:8090` web page
+
+Same-day follow-up on operator request ("add the :8090 page too", closing
+the last surface of vu2cpl-shack TODO #45): the standalone compass page now
+renders the `overlap` flag it was already receiving — an **⟳ OVERLAP chip**
+next to SLEWING (same `.chip`/`.chip.on` pattern: invisible when off, amber
+when on). Three-line change (`web/index.html` + `web/app.js`); static files
+are served with no-cache revalidation, so a `git pull` on the Pi + browser
+reload is the whole deploy — no service restart, tracker state untouched.
+
 ### 2026-09-08 — OVERLAP flag (derived) on the state broadcast
 
 The rotor behind the Rotor-EZ interface is a **Yaesu that rotates past 360°
@@ -138,9 +148,6 @@ zone model agrees with the hardware.
 
 - No auth on the WS (LAN-only, same posture as spe-remote). If the shack
   dashboards move behind auth, consider matching here.
-- The `:8090` standalone compass page doesn't render `overlap` yet (operator
-  scoped the LED to the two Node-RED dashboards; the field is already in
-  every state frame this page receives, so it's a small `app.js` addition).
 - Overlap end-of-travel limits aren't modelled (the tracker doesn't clamp at
   ±90° past the zone); harmless since the rotor physically can't exceed them.
 - `moving` uses a fixed 2° tolerance; tune in `protocol.MOVE_TOLERANCE_DEG` if

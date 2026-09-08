@@ -65,6 +65,9 @@ needed (mirrors how `spe-remote` serves its UI at `:8888/`). It's just another
   target. **Click anywhere on the dial to slew to that bearing.**
 - **Numeric azimuth + GO**, **preset bearings** (N/NE/E/SE/S/SW/W/NW),
   a prominent **STOP**, and **LP / +180°** (long path).
+- **⟳ OVERLAP chip** — lights amber (next to SLEWING) while the gateway's
+  derived `overlap` flag says the rotor is past 360° of travel; same
+  convention as the OVL LEDs on the Node-RED dashboards.
 - **Status line** — connection pill, `rotor: up/down` (from the heartbeat's
   `serial` field), and the client count. Controls grey out when the controller
   isn't answering (e.g. rotator power off via Tasmota).
