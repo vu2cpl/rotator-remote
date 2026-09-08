@@ -22,7 +22,10 @@ tracker:
   # with direction (rotator/protocol.py OverlapTracker).
   end_stop_deg: 180            # mechanical end stop, compass degrees (180 = South)
   hysteresis_deg: 2.0          # anti-flicker margin at the overlap boundary
-  state_file: ~/.rotator-remote.state.json   # snapshot so overlap survives restarts
+  # Snapshot so overlap survives restarts. 'auto' = $STATE_DIRECTORY/state.json
+  # under systemd (/var/lib/rotator-remote — the unit's ProtectHome=read-only
+  # blocks writing to ~), else ~/.rotator-remote.state.json for bare ./run.sh.
+  state_file: auto
 
 logging:
   level: INFO              # DEBUG, INFO, WARNING, ERROR

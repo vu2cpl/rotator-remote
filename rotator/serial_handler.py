@@ -62,9 +62,9 @@ class RotatorSerialHandler:
             end_stop_deg=getattr(tracker_config, "end_stop_deg", 180),
             hysteresis_deg=getattr(tracker_config, "hysteresis_deg", 2.0),
         )
-        self._state_path = Path(os.path.expanduser(
-            getattr(tracker_config, "state_file", "~/.rotator-remote.state.json")
-        ))
+        self._state_path = self._resolve_state_path(
+            getattr(tracker_config, "state_file", "auto")
+        )
         self._saved_snapshot = self._load_snapshot()
         self._last_persist_time = 0.0
         self._last_persist_unwrapped = None
@@ -225,12 +225,26 @@ class RotatorSerialHandler:
             self._persist_snapshot()
         return ov
 
+    @staticmethod
+    def _resolve_state_path(raw: str) -> Path:
+        """'auto' prefers systemd's $STATE_DIRECTORY (the unit's
+        ProtectHome=read-only hardening blocks ~), falling back to the home
+        dir for bare ./run.sh use. An explicit path is honoured as given."""
+        if raw == "auto":
+            sd = os.environ.get("STATE_DIRECTORY")
+            if sd:
+                return Path(sd.split(":")[0]) / "state.json"
+            return Path(os.path.expanduser("~/.rotator-remote.state.json"))
+        return Path(os.path.expanduser(raw))
+
     def _should_persist(self) -> bool:
         tr = self._tracker
         if tr.unwrapped is None:
             return False
         if self._last_persist_unwrapped is None:
-            return True
+            # Nothing successfully written yet — try, but no more often than
+            # every 5 s so an unwritable path can't spin at the poll rate.
+            return time.time() - self._last_persist_time >= 5.0
         return (abs(tr.unwrapped - self._last_persist_unwrapped) >= 5.0
                 and time.time() - self._last_persist_time >= 5.0)
 
@@ -238,6 +252,7 @@ class RotatorSerialHandler:
         tr = self._tracker
         if tr.unwrapped is None:
             return
+        self._last_persist_time = time.time()   # attempt time — throttles retries too
         tmp = self._state_path.with_name(self._state_path.name + ".tmp")
         try:
             tmp.write_text(json.dumps({
@@ -247,10 +262,13 @@ class RotatorSerialHandler:
                 "ts": time.time(),
             }))
             tmp.replace(self._state_path)
-            self._last_persist_time = time.time()
             self._last_persist_unwrapped = tr.unwrapped
         except Exception as e:
-            logger.warning(f"Could not persist overlap snapshot: {e}")
+            if time.time() - getattr(self, "_last_persist_warn", 0.0) > 60.0:
+                self._last_persist_warn = time.time()
+                logger.warning(
+                    f"Could not persist overlap snapshot to {self._state_path}: {e}"
+                )
 
     def _load_snapshot(self):
         try:

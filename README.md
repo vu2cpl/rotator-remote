@@ -197,7 +197,7 @@ Remove: `sudo ./uninstall-service.sh`.
 | `polling.serial_alive_threshold` | `5` | reply within N s ⇒ `serial:"up"` |
 | `tracker.end_stop_deg` | `180` | mechanical end stop (compass °) for overlap derivation |
 | `tracker.hysteresis_deg` | `2.0` | anti-flicker margin at the overlap boundary |
-| `tracker.state_file` | `~/.rotator-remote.state.json` | overlap snapshot, survives restarts |
+| `tracker.state_file` | `auto` | overlap snapshot, survives restarts — `auto` = `$STATE_DIRECTORY/state.json` under systemd (`/var/lib/rotator-remote`; the unit's `ProtectHome=read-only` blocks `~`), else `~/.rotator-remote.state.json` |
 
 ---
 

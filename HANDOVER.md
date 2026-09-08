@@ -91,6 +91,22 @@ the port) before `rotator-remote` starts, or the gateway can't open the device.
 
 ## What changed
 
+### 2026-09-08 (later still) — snapshot persistence actually works now
+
+Live testing surfaced that the snapshot had **never once been written**: the
+unit's `ProtectHome=read-only` hardening made `~/.rotator-remote.state.json`
+unwritable to the service (`[Errno 30] Read-only file system`), and the
+failure retried at the poll rate, spamming the journal. Fix:
+`StateDirectory=rotator-remote` in the unit (systemd creates
+`/var/lib/rotator-remote` owned by the service user and exports
+`$STATE_DIRECTORY`), `tracker.state_file` default changed to `auto`
+(resolves to `$STATE_DIRECTORY/state.json` under systemd, the home-dir path
+for bare `./run.sh`, explicit paths honoured), failed persists throttled to
+one attempt per 5 s and one WARNING per minute. Deploying a unit change =
+`git pull` + `sudo ./install-service.sh` (re-renders + restarts). Restore
+verified live: restarted the service while the rotor sat in overlap — the
+flag came back `true` from the snapshot.
+
 ### 2026-09-08 (later) — OVERLAP chip on the `:8090` web page
 
 Same-day follow-up on operator request ("add the :8090 page too", closing

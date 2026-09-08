@@ -38,7 +38,10 @@ class TrackerConfig:
     end_stop_deg: int = 180
     hysteresis_deg: float = 2.0
     # Snapshot file so the overlap flag survives service restarts.
-    state_file: str = "~/.rotator-remote.state.json"
+    # 'auto' = $STATE_DIRECTORY/state.json under systemd (the unit's
+    # ProtectHome=read-only blocks ~), else ~/.rotator-remote.state.json
+    # for bare ./run.sh use. An explicit path is honoured as given.
+    state_file: str = "auto"
 
 
 @dataclass

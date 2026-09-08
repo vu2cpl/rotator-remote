@@ -23,6 +23,10 @@ StandardError=journal
 NoNewPrivileges=true
 ProtectSystem=full
 ProtectHome=read-only
+# Writable state dir for the overlap snapshot (ProtectHome blocks ~).
+# systemd creates /var/lib/rotator-remote owned by {{USER}} and exports
+# $STATE_DIRECTORY; the tracker's state_file 'auto' resolves to it.
+StateDirectory=rotator-remote
 
 [Install]
 WantedBy=multi-user.target
