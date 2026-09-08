@@ -117,7 +117,11 @@ no such frame has been observed yet.
 Tests: `tests/test_overlap_tracker.py` (runnable directly, no hardware) —
 CW/CCW overlap entry+exit, north-crossing non-event, boundary-jitter
 hysteresis, snapshot restore. Consumed by vu2cpl-shack (D1 compass OVL LED +
-Vue RotatorCard OVERLAP indicator, same-day change there).
+Vue RotatorCard OVERLAP indicator, same-day change there). **Verified
+on-air the same day**: operator swung the rotor across South into overlap —
+the derived flag lit both dashboards and **matched the controller's
+front-panel OVERLAP LED** (heading 189, overlap true), so the tracker's
+zone model agrees with the hardware.
 
 ## Testing
 
