@@ -105,11 +105,12 @@ for bare `./run.sh`, explicit paths honoured), failed persists throttled to
 one attempt per 5 s and one WARNING per minute. Deploying a unit change =
 `git pull` + `sudo ./install-service.sh` (re-renders + restarts). Verified
 at deploy: `/var/lib/rotator-remote/` created and owned by the service
-user, journal spam gone. The first real snapshot write happens on the next
-heading sample — the controller was powered off at deploy time, so none had
-arrived yet; the restore path itself is covered by the unit tests. Worth
-glancing at `/var/lib/rotator-remote/state.json` after the rotator's next
-use.
+user, journal spam gone. **Write path confirmed minutes later** when the
+operator powered the rotator back on: `state.json` appeared and tracked the
+moving rotor (`heading/unwrapped/overlap/ts`, refreshed every ≥5° of
+travel), with zero persist errors — and the journal logged a clean overlap
+enter/clear cycle (185 → 176) along the way. Restore-on-restart remains
+covered by the unit tests.
 
 ### 2026-09-08 (later) — OVERLAP chip on the `:8090` web page
 
