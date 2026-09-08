@@ -74,6 +74,7 @@ def main() -> None:
         serial_config=config.serial,
         polling_config=config.polling,
         on_state_update=RotatorWebSocket.broadcast_state,
+        tracker_config=config.tracker,
     )
     RotatorWebSocket.configure(
         serial_handler=serial_handler,

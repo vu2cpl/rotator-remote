@@ -89,12 +89,44 @@ vu2cpl-shack SHACK_CHANGELOG entry dated around this repo's creation.
 **Deploy ordering matters:** the refactored flow must deploy FIRST (releasing
 the port) before `rotator-remote` starts, or the gateway can't open the device.
 
+## What changed
+
+### 2026-09-08 — OVERLAP flag (derived) on the state broadcast
+
+The rotor behind the Rotor-EZ interface is a **Yaesu that rotates past 360°
+of travel into an overlap zone** (operator-confirmed; end stop at South).
+DCU-1 only ever reports azimuth mod 360 — no overlap bit on the wire — so the
+gateway now **derives** it: `OverlapTracker` (`rotator/protocol.py`) keeps an
+unwrapped-travel accumulator fed by the ~1 Hz poll and flips `overlap` when
+travel passes either end of the `[stop, stop+360]` normal zone, with 2°
+hysteresis so parking on the boundary doesn't flicker. Config lives under
+`tracker:` in `config.yaml` (`end_stop_deg: 180`). The flag rides on every
+state broadcast (`overlap: true|false`) and on `/healthz`; consumers that
+ignore unknown fields are unaffected.
+
+Persistence: a snapshot (`~/.rotator-remote.state.json`, atomic tmp+rename,
+throttled writes) restores the flag across service restarts iff the heading
+hasn't moved >15° while down — only front-panel-knob use can do that, since
+every remote path runs through this service. A stale/unreadable snapshot
+falls back to "assume normal zone" and self-corrects at the next stop
+crossing. Also new: rate-limited INFO log for digit frames that parse >360
+(`_log_unparsed`) — if this Rotor-EZ variant ever reports raw azimuth beyond
+360 in overlap, that would let the flag be read directly instead of derived;
+no such frame has been observed yet.
+
+Tests: `tests/test_overlap_tracker.py` (runnable directly, no hardware) —
+CW/CCW overlap entry+exit, north-crossing non-event, boundary-jitter
+hysteresis, snapshot restore. Consumed by vu2cpl-shack (D1 compass OVL LED +
+Vue RotatorCard OVERLAP indicator, same-day change there).
+
 ## Testing
 
 - Offline unit test (no hardware): exercises `set_azimuth_cmd` / `parse_heading`
   / `RotatorState.compute_moving` / `send_command` translation / split-frame
   buffering. Ran green on macOS during development (venv + pytest-free inline
   asserts). Re-run by importing the modules and asserting the byte outputs.
+- Overlap tracker: `python3 tests/test_overlap_tracker.py` (pure logic, runs
+  anywhere).
 - On the Pi: free the port, `./run.sh`, `curl :8090/healthz`, `wscat` a `goto`,
   watch the rotor and `journalctl -u rotator-remote -f`.
 
@@ -102,7 +134,11 @@ the port) before `rotator-remote` starts, or the gateway can't open the device.
 
 - No auth on the WS (LAN-only, same posture as spe-remote). If the shack
   dashboards move behind auth, consider matching here.
-- No automated test suite committed yet (inline asserts only during dev).
+- The `:8090` standalone compass page doesn't render `overlap` yet (operator
+  scoped the LED to the two Node-RED dashboards; the field is already in
+  every state frame this page receives, so it's a small `app.js` addition).
+- Overlap end-of-travel limits aren't modelled (the tracker doesn't clamp at
+  ±90° past the zone); harmless since the rotor physically can't exceed them.
 - `moving` uses a fixed 2° tolerance; tune in `protocol.MOVE_TOLERANCE_DEG` if
   the readout jitters.
 - Reconnect is a simple reopen-every-3s in the reader thread; fine for a cable

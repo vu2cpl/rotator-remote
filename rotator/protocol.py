@@ -78,6 +78,7 @@ class RotatorState:
     heading: int = None      # last reported azimuth (0-359) or None until first reply
     target: int = None       # last commanded heading, or None after stop
     moving: bool = False     # True while heading is converging on target
+    overlap: bool = False    # True while the rotor is in its overlap zone (see OverlapTracker)
     ts: float = 0.0          # epoch seconds of this snapshot
 
     def to_json(self) -> str:
@@ -94,3 +95,71 @@ class RotatorState:
     def stamp(self) -> "RotatorState":
         self.ts = time.time()
         return self
+
+
+# --- Overlap tracking ---------------------------------------------------
+
+def signed_delta(new: float, prev: float) -> float:
+    """Signed shortest-path angular movement prev -> new, in [-180, 180)."""
+    return ((new - prev + 540.0) % 360.0) - 180.0
+
+
+class OverlapTracker:
+    """Derives the front-panel-style OVERLAP flag from wrapped 0-359 reports.
+
+    The rotor (a Yaesu behind the Rotor-EZ serial interface) can physically
+    rotate past 360 degrees of travel into an overlap zone, but the DCU-1
+    wire protocol only ever reports azimuth modulo 360 — there is no overlap
+    flag on the wire. The overlap state is therefore *derived* by watching
+    the azimuth cross the mechanical end stop with direction:
+
+      * The normal zone is one full turn starting at the end stop:
+        unwrapped travel in [stop, stop + 360].
+      * Each heading sample moves an unwrapped-travel accumulator by the
+        signed shortest-path delta (poll is ~1 Hz and the rotor moves a few
+        deg/s, so the shortest path is always the true path).
+      * Travel beyond either end of the normal zone = overlap. A small
+        hysteresis stops the flag flickering when parked exactly on the
+        boundary.
+
+    Consequence to keep in mind: the flag can only change while this tracker
+    is watching. Movement performed with the gateway down (front-panel knob)
+    desyncs it until the rotor next crosses the end stop — the persisted
+    snapshot in the serial handler narrows that window to knob use only.
+    """
+
+    def __init__(self, end_stop_deg: int = 180, hysteresis_deg: float = 2.0):
+        self.stop = int(end_stop_deg) % 360
+        self.hyst = float(hysteresis_deg)
+        self.unwrapped = None    # absolute travel in degrees, or None until first sample
+        self.overlap = False
+
+    def _normal_rep(self, heading: float) -> float:
+        """Representative of ``heading`` inside the normal zone [stop, stop+360)."""
+        h = heading % 360.0
+        return h if h >= self.stop else h + 360.0
+
+    def reset(self, heading: float) -> None:
+        """(Re)anchor assuming the rotor is in the normal zone."""
+        self.unwrapped = self._normal_rep(heading)
+        self.overlap = False
+
+    def restore(self, unwrapped: float, overlap: bool) -> None:
+        """Adopt a persisted snapshot (validated by the caller)."""
+        self.unwrapped = float(unwrapped)
+        self.overlap = bool(overlap)
+
+    def update(self, heading: float) -> bool:
+        """Feed one azimuth sample; returns the current overlap flag."""
+        if self.unwrapped is None:
+            self.reset(heading)
+            return self.overlap
+        self.unwrapped += signed_delta(heading, self.unwrapped % 360.0)
+        lo, hi = float(self.stop), float(self.stop) + 360.0
+        if not self.overlap:
+            if self.unwrapped > hi + self.hyst or self.unwrapped < lo - self.hyst:
+                self.overlap = True
+        else:
+            if lo + self.hyst <= self.unwrapped <= hi - self.hyst:
+                self.overlap = False
+        return self.overlap

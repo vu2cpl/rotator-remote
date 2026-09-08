@@ -15,5 +15,14 @@ polling:
   presence_heartbeat: 5        # seconds between {type:heartbeat,...} presence msgs
   serial_alive_threshold: 5    # a controller reply within N s ⇒ serial reported "up"
 
+tracker:
+  # OVERLAP flag derivation — the rotor (Yaesu behind the Rotor-EZ interface)
+  # rotates past 360 deg into an overlap zone, but DCU-1 only reports azimuth
+  # mod 360, so overlap is derived by watching the heading cross the end stop
+  # with direction (rotator/protocol.py OverlapTracker).
+  end_stop_deg: 180            # mechanical end stop, compass degrees (180 = South)
+  hysteresis_deg: 2.0          # anti-flicker margin at the overlap boundary
+  state_file: ~/.rotator-remote.state.json   # snapshot so overlap survives restarts
+
 logging:
   level: INFO              # DEBUG, INFO, WARNING, ERROR

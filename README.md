@@ -83,7 +83,7 @@ Endpoint: `ws://<pi>:8090/ws`
 **Server → client** (JSON text):
 
 ```json
-{"type":"state","heading":123,"target":45,"moving":true,"ts":1749200000.1}
+{"type":"state","heading":123,"target":45,"moving":true,"overlap":false,"ts":1749200000.1}
 ```
 ```json
 {"type":"heartbeat","serial":"up","ts":1749200005.0,"clients":2}
@@ -92,6 +92,14 @@ Endpoint: `ws://<pi>:8090/ws`
 - `heading` — last reported azimuth 0–359, or `null` until the first reply.
 - `target` — last commanded heading, or `null` after a stop.
 - `moving` — `true` while the heading is converging on the target (>2° away).
+- `overlap` — `true` while the rotor is in its overlap zone (past 360° of
+  travel). **Derived, not read from the wire**: DCU-1 only reports azimuth
+  mod 360, so the gateway watches the heading cross the mechanical end stop
+  (`tracker.end_stop_deg`, default 180 = South) with direction and keeps an
+  unwrapped-travel accumulator (`rotator/protocol.py` `OverlapTracker`). A
+  snapshot file makes the flag survive restarts; movement done with the
+  gateway down (front-panel knob) can desync it until the rotor next crosses
+  the stop.
 - `serial` (heartbeat) — `"up"` iff the controller answered within
   `serial_alive_threshold` seconds. The FTDI cable stays USB-powered even when
   the rotor controller is off, so this keys off reply recency, not cable state.
@@ -184,6 +192,9 @@ Remove: `sudo ./uninstall-service.sh`.
 | `polling.heartbeat` | `15` | force a state re-broadcast every N s even if unchanged |
 | `polling.presence_heartbeat` | `5` | seconds between presence heartbeats |
 | `polling.serial_alive_threshold` | `5` | reply within N s ⇒ `serial:"up"` |
+| `tracker.end_stop_deg` | `180` | mechanical end stop (compass °) for overlap derivation |
+| `tracker.hysteresis_deg` | `2.0` | anti-flicker margin at the overlap boundary |
+| `tracker.state_file` | `~/.rotator-remote.state.json` | overlap snapshot, survives restarts |
 
 ---
 

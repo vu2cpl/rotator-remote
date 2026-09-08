@@ -32,10 +32,21 @@ class PollingConfig:
 
 
 @dataclass
+class TrackerConfig:
+    # Overlap derivation (see rotator/protocol.py OverlapTracker). The rotor's
+    # mechanical end stop in compass degrees: 180 = South (this shack's Yaesu).
+    end_stop_deg: int = 180
+    hysteresis_deg: float = 2.0
+    # Snapshot file so the overlap flag survives service restarts.
+    state_file: str = "~/.rotator-remote.state.json"
+
+
+@dataclass
 class AppConfig:
     serial: SerialConfig = field(default_factory=SerialConfig)
     server: ServerConfig = field(default_factory=ServerConfig)
     polling: PollingConfig = field(default_factory=PollingConfig)
+    tracker: TrackerConfig = field(default_factory=TrackerConfig)
     log_level: str = "INFO"
 
 
@@ -51,6 +62,7 @@ def load_config(path: str = "config.yaml") -> AppConfig:
             ("serial", config.serial),
             ("server", config.server),
             ("polling", config.polling),
+            ("tracker", config.tracker),
         ):
             if section in raw and isinstance(raw[section], dict):
                 for k, v in raw[section].items():
