@@ -103,9 +103,13 @@ failure retried at the poll rate, spamming the journal. Fix:
 (resolves to `$STATE_DIRECTORY/state.json` under systemd, the home-dir path
 for bare `./run.sh`, explicit paths honoured), failed persists throttled to
 one attempt per 5 s and one WARNING per minute. Deploying a unit change =
-`git pull` + `sudo ./install-service.sh` (re-renders + restarts). Restore
-verified live: restarted the service while the rotor sat in overlap — the
-flag came back `true` from the snapshot.
+`git pull` + `sudo ./install-service.sh` (re-renders + restarts). Verified
+at deploy: `/var/lib/rotator-remote/` created and owned by the service
+user, journal spam gone. The first real snapshot write happens on the next
+heading sample — the controller was powered off at deploy time, so none had
+arrived yet; the restore path itself is covered by the unit tests. Worth
+glancing at `/var/lib/rotator-remote/state.json` after the rotator's next
+use.
 
 ### 2026-09-08 (later) — OVERLAP chip on the `:8090` web page
 
