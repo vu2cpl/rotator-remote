@@ -125,6 +125,12 @@ URB stop does: stall recovers, a silent controller backs off, a GOTO resets
 the backoff, `stall_reopen: 0` turns it off. Verified failing on the old code
 and passing on the new. `tests/test_overlap_tracker.py` still green.
 
+**Pi:** deployed on noderedpi4 2026-11-15 20:08 IST (`313566f`, by Manoj). The
+rotator was powered off at the time: one WARNING, two backoff reopens, then
+`Rotor-EZ replying again` at 20:09:12 when power came on; overlap snapshot
+restored (drift 0°), GOTOs fine, `/healthz` `serial: up`. A real URB stall
+has not recurred yet, so that path is proven by the test only.
+
 ### 2026-09-08 (later still) — snapshot persistence actually works now
 
 Live testing surfaced that the snapshot had **never once been written**: the
