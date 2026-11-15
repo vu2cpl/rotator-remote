@@ -28,6 +28,7 @@ class HealthHandler(tornado.web.RequestHandler):
             "heading": sh.state.heading if sh else None,
             "target": sh.state.target if sh else None,
             "overlap": sh.state.overlap if sh else None,
+            "stall_reopens": sh.stall_reopens if sh else None,
             "ts": time.time(),
         }
         self.set_header("Content-Type", "application/json")

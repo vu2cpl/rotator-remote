@@ -29,6 +29,9 @@ class PollingConfig:
     heartbeat: float = 15.0              # force a state re-broadcast every N s
     presence_heartbeat: float = 5.0      # presence/serial-status heartbeat every N s
     serial_alive_threshold: float = 5.0  # reply within N s ⇒ serial considered "up"
+    # Reopen the serial port after N s with no reply (USB read-stall
+    # recovery, backs off to 60 s while silence lasts). 0 disables it.
+    stall_reopen: float = 10.0
 
 
 @dataclass

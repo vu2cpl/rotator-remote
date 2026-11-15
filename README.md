@@ -121,8 +121,9 @@ Endpoint: `ws://<pi>:8090/ws`
   and issues a goto. Needs a known current heading.
 
 **Health check:** `GET http://<pi>:8090/healthz` →
-`{"status":"ok","clients":N,"serial":"up|down","heading":…,"target":…,"ts":…}`.
-(`/` returns the same.)
+`{"status":"ok","clients":N,"serial":"up|down","heading":…,"target":…,"overlap":…,"stall_reopens":N,"ts":…}`.
+`stall_reopens` counts the serial-port reopens done by the stall watchdog since
+the service started (see Troubleshooting). `/` serves the web UI.
 
 ---
 
@@ -195,6 +196,7 @@ Remove: `sudo ./uninstall-service.sh`.
 | `polling.heartbeat` | `15` | force a state re-broadcast every N s even if unchanged |
 | `polling.presence_heartbeat` | `5` | seconds between presence heartbeats |
 | `polling.serial_alive_threshold` | `5` | reply within N s ⇒ `serial:"up"` |
+| `polling.stall_reopen` | `10` | reopen the serial port after N s with no reply, to recover a stalled USB read. Backs off to 60 s while the controller stays silent; a client command resets it. `0` turns it off |
 | `tracker.end_stop_deg` | `180` | mechanical end stop (compass °) for overlap derivation |
 | `tracker.hysteresis_deg` | `2.0` | anti-flicker margin at the overlap boundary |
 | `tracker.state_file` | `auto` | overlap snapshot, survives restarts — `auto` = `$STATE_DIRECTORY/state.json` under systemd (`/var/lib/rotator-remote`; the unit's `ProtectHome=read-only` blocks `~`), else `~/.rotator-remote.state.json` |
@@ -207,6 +209,7 @@ Remove: `sudo ./uninstall-service.sh`.
 |---|---|
 | `Failed to open serial port` on start | Node-RED (or another process) still owns the port. Free it first (deploy the ws-client flow / stop Node-RED), or check `serial.port` exists in `/dev/serial/by-id/`. |
 | `serial:"down"` in heartbeats | Controller not answering — rotor power off, wrong baud, or wrong device path. Power is separate (Tasmota/MQTT); confirm the controller is on. |
+| Heading frozen while the rotor turns, `serial:"down"` with power on | The USB read stalled: `dmesg` shows `ftdi_sio ttyUSB…: usb_serial_generic_read_bulk_callback - urb stopped: -32`. The port stays open but nothing arrives. Since 2026-11-15 the stall watchdog reopens the port after `polling.stall_reopen` s (log: `No reply from the Rotor-EZ … reopening the serial port`), and the heading comes back by itself; a GOTO recovers it within 10 s. On older versions, `sudo systemctl restart rotator-remote`. |
 | Permission denied on the port | The service user isn't in `dialout`. `install-service.sh` adds it; log out/in (or reboot) for it to take effect. |
 | Heading never updates | Confirm replies are `;`-terminated `<NNN>;`. `journalctl -u rotator-remote -f` and watch for parse activity; bump `logging.level: DEBUG`. |
 

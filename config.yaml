@@ -14,6 +14,8 @@ polling:
   heartbeat: 15                # force a state re-broadcast every N s even if unchanged
   presence_heartbeat: 5        # seconds between {type:heartbeat,...} presence msgs
   serial_alive_threshold: 5    # a controller reply within N s ⇒ serial reported "up"
+  stall_reopen: 10             # reopen the port after N s with no reply (USB read-stall
+                               # recovery, backs off to 60 s while silent); 0 = off
 
 tracker:
   # OVERLAP flag derivation — the rotor (Yaesu behind the Rotor-EZ interface)

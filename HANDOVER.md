@@ -91,6 +91,40 @@ the port) before `rotator-remote` starts, or the gateway can't open the device.
 
 ## What changed
 
+### 2026-11-15 — stalled-read watchdog (heading froze at 99°)
+
+**Symptom:** the dashboard compass sat at 99° while the rotor turned on GOTOs.
+`/healthz` said `serial: down` with rotator power on. The service log showed
+the GOTOs going out and no errors.
+
+**Cause:** at about 18:05 IST on 2026-11-14 the Pi's kernel logged
+`ftdi_sio ttyUSB1: usb_serial_generic_read_bulk_callback - urb stopped: -32`
+(and the same on ttyUSB0, the SPE adapter). An EPIPE on the bulk-in URB makes
+the driver stop resubmitting it, so reads stay empty until the tty is closed
+and reopened. The fd stays valid and writes still work, so no exception
+reached the reader's reconnect path. The last heading heard (99°, 13 Nov)
+stayed on every display. A manual `systemctl restart rotator-remote` on
+2026-11-15 brought it back (heading 345°, `serial: up`).
+
+**Fix:** `RotatorSerialHandler._stall_watchdog` (a third loop task). When the
+port is open but nothing has parsed for `polling.stall_reopen` s (default 10)
+since the later of the last reply and the last open, it asks the reader
+thread to close and reopen the port. The close happens on the reader thread,
+between reads, so a port is never closed under a read. The gateway cannot tell
+a stall from "rotator powered off" (both are silence), so while silence lasts
+the retries back off 10 → 20 → 40 → 60 s. Any client command (`goto`, `stop`,
+`lpsp`) resets the backoff, so a GOTO on a stalled port recovers within 10 s.
+Logging: one WARNING per silence episode, later reopens at DEBUG, and
+`Rotor-EZ replying again` at INFO when replies return. `/healthz` gained
+`stall_reopens` (count since start). The Rotor-EZ has no line-powered
+function, so the DTR/RTS movement on reopen does not matter here (spe-remote
+needed extra care for that; see its handover).
+
+Test: `tests/test_stall_reopen.py` with a fake port that goes deaf the way the
+URB stop does: stall recovers, a silent controller backs off, a GOTO resets
+the backoff, `stall_reopen: 0` turns it off. Verified failing on the old code
+and passing on the new. `tests/test_overlap_tracker.py` still green.
+
 ### 2026-09-08 (later still) — snapshot persistence actually works now
 
 Live testing surfaced that the snapshot had **never once been written**: the
@@ -162,6 +196,8 @@ zone model agrees with the hardware.
   asserts). Re-run by importing the modules and asserting the byte outputs.
 - Overlap tracker: `python3 tests/test_overlap_tracker.py` (pure logic, runs
   anywhere).
+- Stalled-read watchdog: `python3 tests/test_stall_reopen.py` (needs pyserial +
+  pyyaml; fake port, about 5 s).
 - On the Pi: free the port, `./run.sh`, `curl :8090/healthz`, `wscat` a `goto`,
   watch the rotor and `journalctl -u rotator-remote -f`.
 
@@ -173,7 +209,13 @@ zone model agrees with the hardware.
   ±90° past the zone); harmless since the rotor physically can't exceed them.
 - `moving` uses a fixed 2° tolerance; tune in `protocol.MOVE_TOLERANCE_DEG` if
   the readout jitters.
-- Reconnect is a simple reopen-every-3s in the reader thread; fine for a cable
-  that rarely drops.
+- Reconnect is a simple reopen-every-3s in the reader thread when the port
+  errors, plus the stall watchdog (2026-11-15) when it goes silent. While the
+  rotator is powered off the watchdog keeps reopening every 60 s; harmless, but
+  if a cleaner signal is ever wanted, the gateway could subscribe to the
+  Tasmota `POWER2` state and pause the watchdog while power is off.
+- Root cause of the 2026-11-14 URB stop on both FTDI adapters at once is
+  unknown (hub, cable, or EMI). If it repeats, look at the powered hub and at
+  what was keyed at the time.
 
 *73 de VU2CPL*
